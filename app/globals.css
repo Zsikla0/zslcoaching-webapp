@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.brand-shell {
+  background-color: #090909;
+  background-image:
+    linear-gradient(rgba(9, 9, 9, 0.78), rgba(9, 9, 9, 0.9)),
+    url('/login-bg.png');
+  background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.supplements-table-scroll {
+  scrollbar-color: #b99b52 #252525;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+  overscroll-behavior-x: contain;
+}
+
+.supplements-table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.supplements-table-scroll::-webkit-scrollbar-track {
+  margin: 0 10px;
+  border-radius: 999px;
+  background: #252525;
+}
+
+.supplements-table-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid #252525;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #9d813f, #d8b96e, #9d813f);
+}
+
+.supplements-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #e7ca80;
+}

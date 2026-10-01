@@ -1,0 +1,391 @@
+
+"use client";
+
+import { useEffect, useState } from "react";
+
+type SetEntry = {
+  kg: string;
+  reps: string;
+  rir: string;
+};
+
+type Exercise = {
+  id: string;
+  name: string;
+  minReps: number;
+  maxReps: number;
+  sets: SetEntry[];
+};
+
+type TrainingDay = {
+  name: string;
+  exercises: Exercise[];
+};
+
+const initialDays: TrainingDay[] = [
+  {
+    name: "Hétfő – Felsőtest A",
+    exercises: [
+      {
+        id: "bench",
+        name: "Fekvenyomás",
+        minReps: 8,
+        maxReps: 12,
+        sets: [
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+        ],
+      },
+      {
+        id: "row",
+        name: "Evezés",
+        minReps: 10,
+        maxReps: 12,
+        sets: [
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Kedd – Alsótest A",
+    exercises: [
+      {
+        id: "squat",
+        name: "Guggolás",
+        minReps: 6,
+        maxReps: 10,
+        sets: [
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+        ],
+      },
+    ],
+  },
+  {
+    name: "Csütörtök – Felsőtest B",
+    exercises: [
+      {
+        id: "incline",
+        name: "Ferde pados nyomás",
+        minReps: 8,
+        maxReps: 12,
+        sets: [
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+          { kg: "", reps: "", rir: "" },
+        ],
+      },
+    ],
+  },
+];
+
+function getFeedback(reps: string, min: number, max: number) {
+  if (reps.trim() === "") return null;
+
+  const value = Number(reps);
+
+  if (!Number.isFinite(value) || value < 0) return null;
+
+  if (value < min) {
+    return {
+      text: "Ismétléstartomány alatt",
+      color: "#ef7777",
+    };
+  }
+
+  if (value > max) {
+    return {
+      text: "Ismétléstartomány felett",
+      color: "#74d9a0",
+    };
+  }
+
+  return {
+    text: "Ismétléstartományon belül",
+    color: "#d8b96e",
+  };
+}
+
+export default function Home() {
+  const [days, setDays] = useState<TrainingDay[]>(initialDays);
+  const [activeDay, setActiveDay] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("zsl-training-v1");
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDays(parsed);
+        }
+      }
+    } catch (error) {
+      console.error("Nem sikerült betölteni a naplót:", error);
+    }
+
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      localStorage.setItem("zsl-training-v1", JSON.stringify(days));
+    }
+  }, [days, loaded]);
+
+  function updateSet(
+    exerciseId: string,
+    setIndex: number,
+    field: keyof SetEntry,
+    value: string
+  ) {
+    setDays((previous) =>
+      previous.map((day, dayIndex) => {
+        if (dayIndex !== activeDay) return day;
+
+        return {
+          ...day,
+          exercises: day.exercises.map((exercise) => {
+            if (exercise.id !== exerciseId) return exercise;
+
+            return {
+              ...exercise,
+              sets: exercise.sets.map((set, index) =>
+                index === setIndex ? { ...set, [field]: value } : set
+              ),
+            };
+          }),
+        };
+      })
+    );
+  }
+
+  function addSet(exerciseId: string) {
+    setDays((previous) =>
+      previous.map((day, dayIndex) => {
+        if (dayIndex !== activeDay) return day;
+
+        return {
+          ...day,
+          exercises: day.exercises.map((exercise) =>
+            exercise.id === exerciseId
+              ? {
+                  ...exercise,
+                  sets: [
+                    ...exercise.sets,
+                    { kg: "", reps: "", rir: "" },
+                  ],
+                }
+              : exercise
+          ),
+        };
+      })
+    );
+  }
+
+  function addExercise() {
+    const name = window.prompt("Gyakorlat neve:");
+    if (!name?.trim()) return;
+
+    const range = window.prompt(
+      "Ismétléstartomány (például 8-12):",
+      "8-12"
+    );
+
+    if (!range) return;
+
+    const match = range.match(/^\s*(\d+)\s*-\s*(\d+)\s*$/);
+
+    if (!match) {
+      window.alert("A helyes formátum például: 8-12");
+      return;
+    }
+
+    const minReps = Number(match[1]);
+    const maxReps = Number(match[2]);
+
+    if (minReps < 1 || maxReps < minReps) {
+      window.alert("Érvénytelen ismétléstartomány.");
+      return;
+    }
+
+    const newExercise: Exercise = {
+      id: crypto.randomUUID(),
+      name: name.trim(),
+      minReps,
+      maxReps,
+      sets: [{ kg: "", reps: "", rir: "" }],
+    };
+
+    setDays((previous) =>
+      previous.map((day, index) =>
+        index === activeDay
+          ? {
+              ...day,
+              exercises: [...day.exercises, newExercise],
+            }
+          : day
+      )
+    );
+  }
+
+  const day = days[activeDay];
+
+  return (
+    <main className="min-h-screen bg-[#101010] text-white">
+      <header className="border-b border-[#333] bg-[#171717] px-5 py-5">
+        <div className="mx-auto flex max-w-5xl items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-[0.15em] text-[#d8b96e]">
+              ZSL COACHING
+            </h1>
+            <p className="mt-1 text-xs text-[#999]">
+              ONLINE COACHING · EDZÉSNAPLÓ
+            </p>
+          </div>
+
+          <div className="rounded-full border border-[#d8b96e] px-3 py-1 text-xs text-[#d8b96e]">
+            BÉTA
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto max-w-5xl px-4 py-8">
+        <div className="mb-8">
+          <p className="text-sm text-[#aaa]">Üdv a naplódban!</p>
+          <h2 className="mt-2 text-3xl font-bold">Edzéseim</h2>
+          <p className="mt-2 text-sm text-[#999]">
+            Rögzítsd a súlyokat, az ismétléseket és a RIR-értékeket.
+          </p>
+        </div>
+
+        <div className="mb-7 flex gap-2 overflow-x-auto pb-2">
+          {days.map((item, index) => (
+            <button
+              key={index}
+              onClick={() => setActiveDay(index)}
+              className={`shrink-0 rounded-xl border px-4 py-3 text-sm font-semibold transition ${
+                activeDay === index
+                  ? "border-[#d8b96e] bg-[#d8b96e] text-black"
+                  : "border-[#393939] bg-[#202020] text-[#ccc]"
+              }`}
+            >
+              {item.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <h3 className="text-xl font-bold text-[#d8b96e]">
+            {day.name}
+          </h3>
+          <span className="text-xs text-[#999]">
+            {day.exercises.length} gyakorlat
+          </span>
+        </div>
+
+        <div className="space-y-5">
+          {day.exercises.map((exercise) => (
+            <section
+              key={exercise.id}
+              className="overflow-hidden rounded-2xl border border-[#363636] bg-[#1c1c1c]"
+            >
+              <div className="border-b border-[#333] p-5">
+                <h4 className="text-lg font-bold">{exercise.name}</h4>
+                <p className="mt-1 text-sm text-[#aaa]">
+                  Cél: {exercise.minReps}–{exercise.maxReps} ismétlés
+                </p>
+              </div>
+
+              <div className="p-4 sm:p-5">
+                <div className="mb-3 grid grid-cols-[36px_1fr_1fr_1fr] gap-2 text-center text-xs font-bold text-[#999]">
+                  <span>SOR.</span>
+                  <span>KG</span>
+                  <span>ISM.</span>
+                  <span>RIR</span>
+                </div>
+
+                <div className="space-y-3">
+                  {exercise.sets.map((set, setIndex) => {
+                    const feedback = getFeedback(
+                      set.reps,
+                      exercise.minReps,
+                      exercise.maxReps
+                    );
+
+                    return (
+                      <div key={setIndex}>
+                        <div className="grid grid-cols-[36px_1fr_1fr_1fr] items-center gap-2">
+                          <span className="text-center text-sm font-bold text-[#d8b96e]">
+                            {setIndex + 1}.
+                          </span>
+
+                          {(["kg", "reps", "rir"] as const).map(
+                            (field) => (
+                              <input
+                                key={field}
+                                type="number"
+                                min="0"
+                                step={field === "kg" ? "0.5" : "1"}
+                                inputMode="decimal"
+                                placeholder="—"
+                                value={set[field]}
+                                onChange={(event) =>
+                                  updateSet(
+                                    exercise.id,
+                                    setIndex,
+                                    field,
+                                    event.target.value
+                                  )
+                                }
+                                className="min-w-0 rounded-lg border border-[#444] bg-[#292929] px-2 py-3 text-center text-base text-white outline-none focus:border-[#d8b96e]"
+                              />
+                            )
+                          )}
+                        </div>
+
+                        {feedback && (
+                          <p
+                            className="mt-2 pl-10 text-xs font-semibold"
+                            style={{ color: feedback.color }}
+                          >
+                            {feedback.text}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => addSet(exercise.id)}
+                  className="mt-5 w-full rounded-xl border border-dashed border-[#6e6041] py-3 text-sm font-semibold text-[#d8b96e] hover:bg-[#29251b]"
+                >
+                  + Új sorozat
+                </button>
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <button
+          onClick={addExercise}
+          className="mt-6 w-full rounded-xl bg-[#d8b96e] px-5 py-4 font-bold text-black hover:bg-[#ebcd85]"
+        >
+          + Gyakorlat hozzáadása
+        </button>
+
+        <p className="mt-8 text-center text-xs text-[#777]">
+          ZSL Coaching · Az adatok jelenleg ebben a böngészőben tárolódnak.
+        </p>
+      </div>
+    </main>
+  );
+}
